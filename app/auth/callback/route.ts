@@ -1,0 +1,45 @@
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { type NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
+
+export async function GET(request: NextRequest) {
+  // 1. 抓取網址上的 code 參數 (就像去信箱拿信)
+  const { searchParams } = new URL(request.url)
+  const code = searchParams.get('code')
+  
+  // 如果網址上有 "next" 參數，驗證完就跳去那 (預設跳回首頁 /)
+  const next = searchParams.get('next') ?? '/'
+
+  if (code) {
+    // 2. 建立一個 Server 端的 Supabase 客戶端
+    const cookieStore = await cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      }
+    )
+    
+    // 3. 關鍵動作：拿 code 去跟 Supabase 換取真正的 Session (登入狀態)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (!error) {
+      // 4. 換到了！幫使用者轉址回首頁 (或是他原本想去的地方)
+      return NextResponse.redirect(new URL(next, request.url))
+    }
+  }
+
+  // 如果失敗，轉址到錯誤頁面
+  return NextResponse.redirect(new URL('/auth/auth-code-error', request.url))
+}
