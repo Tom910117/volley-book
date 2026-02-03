@@ -103,7 +103,7 @@ export default function LoginPage() {
 
           <div className="flex gap-4 pt-4">
             <Button 
-              className="w-full bg-zinc-900 hover:bg-zinc-800" 
+              className="flex-1 bg-zinc-900 hover:bg-zinc-800" 
               onClick={handleLogin}
               disabled={loading}
             >
@@ -112,7 +112,7 @@ export default function LoginPage() {
             
             <Button 
               variant="outline" 
-              className="w-full" 
+              className="flex-1" 
               onClick={handleSignUp}
               disabled={loading}
             >
