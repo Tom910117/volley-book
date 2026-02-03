@@ -68,11 +68,13 @@ export default function Home() {
         </p>
       </div>
 
-      {/* --- 這是我們的「搜尋列」容器 --- */}
-      <div className="flex w-full max-w-sm items-center space-x-2 p-2 border rounded-xl shadow-lg bg-white/50 backdrop-blur-sm divide-x divide-zinc-200">
-         <div className="flex-1">
+      {/* --- 搜尋列 (原版風格，修復寬度與包覆性) --- */}
+      <div className="flex w-fit items-center p-2 border rounded-xl shadow-lg bg-white/50 backdrop-blur-sm divide-x divide-zinc-200">
+        
+        {/* 1. 地點選擇 */}
+        <div className="px-4">
           <Select value={location} onValueChange={setLocation}>
-            <SelectTrigger className="w-[180px] border-0 shadow-none focus:ring-0">
+            <SelectTrigger className="w-[140px] border-0 shadow-none focus:ring-0 px-0 text-base">
               <SelectValue placeholder="選擇球館" />
             </SelectTrigger>
             <SelectContent>
@@ -81,16 +83,16 @@ export default function Home() {
               <SelectItem value="ntu-gym">台大體育館</SelectItem>
             </SelectContent>
           </Select>
-         </div> 
-        {/* 這裡是 Popover 的外層 */}
-        <div className="flex-1">
+        </div>
+
+        {/* 2. 日期選擇 */}
+        <div className="px-4">
           <Popover>
-            {/* 1. Trigger: 這是「開關」，也就是那個按鈕 */}
             <PopoverTrigger asChild>
               <Button
                 variant={"ghost"}
                 className={cn(
-                  "w-full justify-start text-left font-normal border-0 shadow-none hover:bg-zinc-100",
+                  "w-[160px] justify-start text-left font-normal border-0 shadow-none hover:bg-transparent px-0 text-base",
                   !date && "text-muted-foreground"
                 )}
               >
@@ -98,8 +100,6 @@ export default function Home() {
                 {date ? format(date, "yyyy-MM-dd") : <span>選擇日期</span>}
               </Button>
             </PopoverTrigger>
-
-            {/* 2. Content: 這是「內容」，也就是彈出來的那個視窗 */}
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
@@ -110,12 +110,17 @@ export default function Home() {
             </PopoverContent>
           </Popover>
         </div>
-        <div className="pl-2">
-          {/* 這裡之後可以放「搜尋按鈕」 */}
-          <Button className="bg-zinc-900 text-white hover:bg-zinc-800" onClick={handleSearch}>
+
+        {/* 3. 搜尋按鈕 (現在會乖乖包在最右邊，而且不會有分隔線擋住它) */}
+        <div className="pl-4 pr-1">
+          <Button 
+            className="bg-zinc-900 text-white hover:bg-zinc-700 px-6 rounded-lg" 
+            onClick={handleSearch}
+          >
             搜尋
           </Button>
         </div>
+
       </div>
       {/* --- 搜尋結果展示區 --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl px-4 mt-12">
