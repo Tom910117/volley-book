@@ -235,13 +235,9 @@ export default async function GameDetailPage({ params }: Props) {
         <div className="fixed bottom-0 left-0 w-full bg-white border-t p-4 md:static md:bg-transparent md:border-none md:p-0 flex flex-col gap-3">
           <JoinGameButton 
             gameId={game.id} 
-            courtId={game.court_id}
             userId={user?.id}
             isJoined={isJoined}
             isFull={isFull}
-            gameDate={game.date}
-            startTime={game.start_time}
-            endTime={game.end_time}
             isMaleFull={isMaleFull}
             amIMale={amIMale}
             myStatus={myStatus}

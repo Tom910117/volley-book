@@ -1,130 +1,104 @@
-"use client" // 1. 宣告這是一個客戶端組件 (因為有按鈕互動)
+"use client"
 
-// 2. 引入必要的工具庫
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase-browser" // 客戶端 Supabase 實例
-import { useRouter } from "next/navigation" // 用來刷新頁面
-import { Loader2 } from "lucide-react" // 載入中的轉圈圈圖示
-import { toast } from "sonner" // 漂亮的通知工具
+import { createClient } from "@/lib/supabase-browser"
+import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
-// 3. 定義父元件 (Page) 傳進來的參數型別
 type Props = {
-  gameId: string      // 球局 ID (必填)
-  courtId: string     // 球館 ID (必填)
-  userId?: string     // 使用者 ID (未登入可能是 undefined)
-  isJoined: boolean   // 我是否已在名單內
-  isFull: boolean     // 總人數是否已滿
-  gameDate: string    // 比賽日期 (注意用小寫 string)
-  startTime: string   // 開始時間
-  endTime: string     // 結束時間
-  isMaleFull?: boolean // 男生名額是否滿了 (選填)
-  amIMale?: boolean    // 我是否為男生 (選填)
-  myStatus?: string    // 我目前的狀態 ('confirmed' 或 'waiting')
+  gameId: string
+  userId?: string
+  isJoined: boolean     
+  isFull: boolean       
+  amIMale?: boolean     
+  isMaleFull?: boolean  
+  myStatus?: string     
 }
 
 export function JoinGameButton({ 
   gameId, 
-  courtId, 
   userId, 
   isJoined, 
   isFull, 
-  gameDate, 
-  startTime, 
-  endTime, 
-  isMaleFull, 
   amIMale, 
-  myStatus 
+  isMaleFull,
+  myStatus
 }: Props) {
-  // 4. 定義狀態與掛鉤 (Hooks)
-  const [loading, setLoading] = useState(false) // 控制按鈕是否在轉圈圈
-  const router = useRouter() // 路由控制
-  const supabase = createClient() // 資料庫連線
+  
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
 
-  // 5. 核心邏輯：判斷「如果我現在按報名，是不是要去排候補？」
-  // 條件：(總人數已滿) 或是 (我是男生 且 男生名額已滿)
-  // 注意：前提是我還沒加入 (!isJoined)
+  // 🔥 邏輯：只有在「還沒加入」的時候才需要判斷是否強制候補
   const needsWaitlist = !isJoined && (isFull || (amIMale && isMaleFull))
 
-  // 6. 按鈕點擊處理函式
-  const handleJoin = async () => {
-    // A. 防呆：沒登入不能按
+  const handleClick = async () => {
+    // 1. 防呆：沒登入
     if (!userId) {
       toast.error("請先登入", { description: "登入後才能搶位子喔！" })
-      router.push("/login") // 導向登入頁
+      router.push("/login")
       return
     }
 
-    setLoading(true) // 開始轉圈圈
+    setLoading(true)
 
     try {
       if (isJoined) {
-        // --- B. 退出邏輯 (DELETE) ---
-        // 如果我已經在名單內，點按鈕就是「取消報名」
-        
+        // ==========================================
+        // 🚪 退出邏輯 (Delete) - 維持在前端做
+        // ==========================================
         const { error } = await supabase
           .from("bookings")
-          .delete() // 執行刪除
-          .eq("game_id", gameId) // 鎖定這場局
-          .eq("user_id", userId) // 鎖定我自己
+          .delete()
+          .eq("game_id", gameId)
+          .eq("user_id", userId)
 
-        if (error) throw error // 有錯就丟出去給 catch 抓
+        if (error) throw error
 
-        // 根據我原本是候補還是正選，顯示不同提示
         toast.info(myStatus === 'waiting' ? "已取消候補" : "已取消報名", {
           description: "期待下次球場見！👋"
         })
 
       } else {
-        // --- C. 加入邏輯 (INSERT) ---
-        // 如果我還沒加入，點按鈕就是「報名」
-
-        // 決定寫入的狀態：需要候補就是 'waiting'，不然就是 'confirmed'
-        const status = needsWaitlist ? 'waiting' : 'confirmed'
-
-        const { error } = await supabase
-          .from("bookings")
-          .insert({
-            user_id: userId,
-            game_id: gameId,
-            court_id: courtId,   // 記得寫入球館 ID
-            date: gameDate,      // 寫入日期
-            start_time: startTime, // 寫入開始時間
-            end_time: endTime,     // 寫入結束時間
-            status: status       // 🔥 關鍵：寫入正確狀態 (waiting/confirmed)
-          })
+        // ==========================================
+        // 🙋‍♂️ 加入邏輯 (RPC Insert) - 防止超賣
+        // ==========================================
+        
+        // 這裡傳入 p_force_waiting: needsWaitlist
+        // 告訴後端：「雖然可能總人數沒滿，但請把我放進候補 (因為我是男生且滿了)」
+        const { data, error } = await supabase.rpc('join_game', {
+          p_game_id: gameId,
+          p_user_id: userId,
+          p_force_waiting: needsWaitlist // 👈 傳送前端的判斷
+        })
 
         if (error) throw error
 
-        // 根據結果顯示不同顏色的成功訊息
-        if (status === 'waiting') {
-          toast.warning("已加入候補隊列 ⏳", {
-            description: "若有人退出，系統將自動遞補並通知你"
-          })
+        if (data.success) {
+          if (data.booking_status === 'waiting') {
+            toast.warning("排隊中", { description: data.message })
+          } else {
+            toast.success("報名成功", { description: data.message })
+          }
         } else {
-          toast.success("報名成功！🏐", {
-            description: "記得準時出席，不見不散！"
-          })
+          toast.error("無法報名", { description: data.message })
         }
       }
 
-      // 7. 刷新頁面，讓最新的名單顯示出來
+      // 🔥 關鍵：操作完畢後，強制刷新頁面，讓最新的名單和人數顯示出來
       router.refresh()
 
     } catch (error: any) {
-      // 8. 錯誤處理
       console.error(error)
-      toast.error("操作失敗", {
-        description: error.message || "系統忙碌中，請稍後再試"
-      })
+      toast.error("操作失敗", { description: error.message || "系統忙碌中" })
     } finally {
-      setLoading(false) // 無論成功失敗，都要停止轉圈圈
+      setLoading(false)
     }
   }
 
-  // --- 9. UI 渲染邏輯 (決定按鈕長什麼樣子) ---
-
-  // 情況一：正在處理中
+  // --- UI 渲染部分 ---
   if (loading) {
     return (
       <Button disabled className="w-full md:w-auto">
@@ -134,38 +108,28 @@ export function JoinGameButton({
     )
   }
 
-  // 情況二：已經加入 (顯示紅色的取消按鈕)
+  // 1. 已加入 (顯示紅色取消)
   if (isJoined) {
     return (
-      <Button 
-        onClick={handleJoin} 
-        variant="destructive" // 紅色樣式
-        className="w-full md:w-auto"
-      >
+      <Button onClick={handleClick} variant="destructive" className="w-full md:w-auto">
         {myStatus === 'waiting' ? "取消候補" : "取消報名"}
       </Button>
     )
   }
 
-  // 情況三：需要候補 (顯示橘色的候補按鈕)
+  // 2. 需要候補 (顯示橘色候補)
   if (needsWaitlist) {
     return (
-      <Button 
-        onClick={handleJoin} 
-        className="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white"
-      >
+      <Button onClick={handleClick} className="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white">
         排隊候補 (目前額滿)
       </Button>
     )
   }
 
-  // 情況四：正常報名 (顯示預設黑色按鈕)
+  // 3. 正常報名 (顯示黑色報名)
   return (
-    <Button 
-      onClick={handleJoin} 
-      className="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white"
-    >
-      🔥 立即報名 (Join)
+    <Button onClick={handleClick} className="w-full md:w-auto bg-zinc-900 hover:bg-zinc-800 text-white">
+      我要報名 +1
     </Button>
   )
 }

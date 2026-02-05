@@ -46,6 +46,8 @@ export function CreateGameForm({ isOpen, onClose, courtId, date, userId, existin
   const [minplayers, setMinplayers] = useState(12)
   const [isAgreed, setIsAgreed] = useState(false)
   const [maleLimit, setMaleLimit] = useState("")
+  const [deadlineType, setDeadlineType] = useState("midnight")
+  const [customDeadline, setCustomDeadline] = useState("")
 
   useEffect(() => {
     const end = calculateEndTime(startTime, Number(duration))
@@ -93,6 +95,36 @@ export function CreateGameForm({ isOpen, onClose, courtId, date, userId, existin
      }
     }
 
+    // --- 🔥 3. 計算截止時間 (Smart Deadline Logic) ---
+    let finalDeadline: string | null = null;
+    const gameDateTimeStr = `${date}T${startTime}:00`; // 比賽完整開始時間
+
+    switch (deadlineType) {
+      case "midnight": // 當天 00:00
+        finalDeadline = new Date(`${date}T00:00:00`).toISOString();
+        break;
+      case "prev_night": // 前一天 23:59
+        const d = new Date(`${date}T00:00:00`);
+        d.setMinutes(d.getMinutes() - 1); // 減1分鐘變成前一天 23:59
+        finalDeadline = d.toISOString();
+        break;
+      case "minus_4h": // 開打前 4 小時
+        finalDeadline = new Date(new Date(gameDateTimeStr).getTime() - 4 * 60 * 60 * 1000).toISOString();
+        break;
+      case "minus_2h": // 開打前 2 小時
+        finalDeadline = new Date(new Date(gameDateTimeStr).getTime() - 2 * 60 * 60 * 1000).toISOString();
+        break;
+      case "custom": // 自訂
+        if (!customDeadline) {
+          toast.warning("請選擇自訂的截止時間！");
+          return;
+        }
+        finalDeadline = new Date(customDeadline).toISOString();
+        break;
+      default: // same_as_start (直到開打)
+        finalDeadline = new Date(gameDateTimeStr).toISOString();
+    }
+
     setLoading(true)
 
     try {
@@ -111,7 +143,8 @@ export function CreateGameForm({ isOpen, onClose, courtId, date, userId, existin
           min_players: minplayers, 
           start_time: startTime,
           end_time: endTime,
-          male_limit: finalMaleLimit
+          male_limit: finalMaleLimit,
+          signup_deadline: finalDeadline
         })
         .select()
         .single() // 拿回剛剛建立的那一筆，因為我們需要它的 ID
@@ -146,164 +179,209 @@ export function CreateGameForm({ isOpen, onClose, courtId, date, userId, existin
     }
   }
 
+  // ... 前面 logic ...
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-white">
+      <DialogContent className="sm:max-w-[500px] bg-white max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>發起揪團 ({date})</DialogTitle>
+          <DialogTitle className="text-xl font-bold text-center border-b pb-2">
+            🏐 發起揪團 ({date})
+          </DialogTitle>
         </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          {/* 團名輸入 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">
-              團名
-            </Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: 快樂週五排球"
-              className="col-span-3"
-            />
-          </div>
 
-          {/* 🔥 時間選擇區 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">開始</Label>
-            <Input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">時長</Label>
-            <Select value={duration} onValueChange={setDuration}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="選擇時長" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="120">2 小時</SelectItem>
-                <SelectItem value="150">2.5 小時</SelectItem>
-                <SelectItem value="180">3 小時</SelectItem>
-                <SelectItem value="210">3.5 小時</SelectItem>
-                <SelectItem value="240">4 小時</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 自動計算的結束時間顯示 */}
-          <div className="text-center text-sm font-bold text-blue-600 bg-blue-50 p-2 rounded">
-            預計時段：{startTime} ~ {endTime}
-          </div>
-
-          {/* 程度 (暫時用 Input，之後可以改 Select) */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="level" className="text-right">
-              程度
-            </Label>
-            <Input
-              id="level"
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="price" className="text-right">
-              價格
-            </Label>
-            <Input
-              id="price"
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
-              className="col-span-3"
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="players" className="text-right">
-              總人數
-            </Label>
-            <Input
-              id="players"
-              value={players}
-              onChange={(e) => setPlayers(Number(e.target.value))}
-              className="col-span-3"
-            />
-          </div>
+        <div className="grid gap-6 py-2">
           
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="minplayers" className="text-right">
-              成團人數
-            </Label>
-            <Input
-              id="minplayers"
-              value={minplayers}
-              onChange={(e) => setMinplayers(Number(e.target.value))}
-              className="col-span-3"
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="maleLimit" className="text-right">
-              男性上限
-            </Label>
-            <Input
-              id="maleLimit"
-              type="number"
-              placeholder="不填代表不限"
-              value={maleLimit}
-              onChange={(e) => setMaleLimit(e.target.value)}
-              className="col-span-3"
-            />
-          </div>
-
-          {/* 公開/私人開關 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="public-mode" className="text-right">
-              公開揪團
-            </Label>
-            <div className="flex items-center space-x-2 col-span-3">
-              <Switch
-                id="public-mode"
-                checked={isPublic}
-                onCheckedChange={setIsPublic}
+          {/* --- 區塊 1: 基本資訊 --- */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-zinc-500">基本資訊</h3>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">團名</Label>
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Ex: 歡樂排球 (必填)"
+                className="col-span-3"
               />
-              <span className="text-sm text-gray-500">
-                {isPublic ? "所有人可見 (公開)" : "只有知道連結的人可見 (私人)"}
-              </span>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="level" className="text-right">程度</Label>
+              <Input
+                id="level"
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="price" className="text-right">費用</Label>
+              <div className="col-span-3 relative">
+                 <Input
+                  id="price"
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(Number(e.target.value))}
+                  className="pl-8" // 留位置給 $ 符號
+                />
+                <span className="absolute left-3 top-2.5 text-zinc-400 text-sm">$</span>
+              </div>
             </div>
           </div>
-          
-           {/* === 🔥 解法 B：責任條款 === */}
-           <div className="flex items-top space-x-2 mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md">
+
+          {/* --- 區塊 2: 時間設定 --- */}
+          <div className="space-y-3 border-t pt-3">
+            <h3 className="text-sm font-semibold text-zinc-500">時間設定</h3>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">時段</Label>
+              <div className="col-span-3 flex gap-2">
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="flex-1"
+                />
+                <Select value={duration} onValueChange={setDuration}>
+                  <SelectTrigger className="w-[110px]">
+                    <SelectValue placeholder="時長" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="120">2 hr</SelectItem>
+                    <SelectItem value="150">2.5 hr</SelectItem>
+                    <SelectItem value="180">3 hr</SelectItem>
+                    <SelectItem value="240">4 hr</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* 預計結束時間提示 */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="col-start-2 col-span-3 text-xs text-blue-600 bg-blue-50 p-2 rounded text-center">
+                預計打到：{endTime}
+              </div>
+            </div>
+
+            {/* 🔥 智慧截止時間 (新增的) */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-red-500 font-medium">報名截止</Label>
+              <div className="col-span-3">
+                <Select value={deadlineType} onValueChange={setDeadlineType}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="選擇截止時間" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="midnight">📅 當天 00:00 (預設)</SelectItem>
+                    <SelectItem value="prev_night">🌙 前一晚 23:59</SelectItem>
+                    <SelectItem value="minus_4h">⏳ 開打前 4 小時</SelectItem>
+                    <SelectItem value="same_as_start">🚩 直到開打前</SelectItem>
+                    <SelectItem value="custom">✍️ 自訂時間...</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* 自訂截止時間輸入框 (只有選自訂才出現) */}
+            {deadlineType === "custom" && (
+              <div className="grid grid-cols-4 items-center gap-4 animate-in fade-in slide-in-from-top-1">
+                <div className="col-start-2 col-span-3">
+                  <Input
+                    type="datetime-local"
+                    value={customDeadline}
+                    onChange={(e) => setCustomDeadline(e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* --- 區塊 3: 人數與限制 --- */}
+          <div className="space-y-3 border-t pt-3">
+            <h3 className="text-sm font-semibold text-zinc-500">人數限制</h3>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">人數</Label>
+              <div className="col-span-3 flex gap-2 items-center">
+                <div className="flex-1">
+                   <span className="text-xs text-zinc-400 mb-1 block">總人數</span>
+                   <Input
+                    type="number"
+                    value={players}
+                    onChange={(e) => setPlayers(Number(e.target.value))}
+                  />
+                </div>
+                <div className="flex-1">
+                  <span className="text-xs text-zinc-400 mb-1 block">成團下限</span>
+                  <Input
+                    type="number"
+                    value={minplayers}
+                    onChange={(e) => setMinplayers(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="maleLimit" className="text-right">男性上限</Label>
+              <Input
+                id="maleLimit"
+                type="number"
+                placeholder="不填代表不限"
+                value={maleLimit}
+                onChange={(e) => setMaleLimit(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="public-mode" className="text-right">隱私</Label>
+              <div className="flex items-center space-x-2 col-span-3">
+                <Switch
+                  id="public-mode"
+                  checked={isPublic}
+                  onCheckedChange={setIsPublic}
+                />
+                <span className="text-sm text-gray-500">
+                  {isPublic ? "公開 (所有人可見)" : "私人 (有連結才可見)"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 責任條款 */}
+          <div className="flex items-start space-x-2 mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
             <Checkbox
               id="terms"
               checked={isAgreed}
               onCheckedChange={(checked) => setIsAgreed(checked as boolean)}
+              className="mt-1"
             />
-            <div className="grid gap-1.5 leading-none">
+            <div className="grid gap-1">
               <Label
-              htmlFor="terms"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-amber-900"
-            >
-              主揪責任聲明
-            </Label>
-            <p className="text-xs text-amber-700">
-              我了解開團需負責聯繫球友、預付場地費，並確保當天活動順利進行。若無故缺席將會被停權。
-            </p>
-           </div>
-          </div>  
+                htmlFor="terms"
+                className="text-sm font-medium leading-none text-amber-900 cursor-pointer"
+              >
+                主揪責任聲明
+              </Label>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                我了解需負責聯繫球友、預付場地費，並確保活動順利進行。無故缺席將被停權。
+              </p>
+            </div>
+          </div>
 
         </div>
 
-        <DialogFooter>
-          <Button type="submit" onClick={handleSubmit} disabled={loading || !isAgreed}>
+        <DialogFooter className="mt-2">
+          <Button 
+            className="w-full bg-zinc-900 hover:bg-zinc-800 text-white" 
+            onClick={handleSubmit} 
+            disabled={loading || !isAgreed}
+          >
             {loading ? "建立中..." : "確認開團"}
           </Button>
         </DialogFooter>
