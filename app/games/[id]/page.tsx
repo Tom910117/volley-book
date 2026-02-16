@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { JoinGameButton } from "@/components/join-game-button"
 import Link from "next/link"
 import { formatTime } from "@/lib/time-utils"
+import { Calendar as CalendarIcon, MapPin, Clock, Users, ArrowRight, Building2, Trophy, CircleDollarSign } from "lucide-react"
 import { CancelGameButton } from "@/components/cancel-game-button"
 import {ShareGameButton} from "@/components/share-game-button"
 type Props = {
@@ -96,11 +97,34 @@ export default async function GameDetailPage({ params }: Props) {
         {/* 卡片：局的資訊 */}
         <div className="bg-white rounded-xl shadow p-6 mb-6">
           <div className="flex justify-between items-start mb-4">
+            
+            {/* 左側：標題、狀態、與屬性標籤包在一起 */}
             <div>
               <h2 className="text-2xl font-bold text-gray-800">{game.title || "未命名揪團"}</h2>
               <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mt-1">
                 {game.is_public ? "公開局" : "私人局"}
               </span>
+              
+              {/* 四個屬性標籤 (移到這裡，就會換行到下方) */}
+              {/* 我拿掉了 border-t，因為緊接在下方的話沒有分隔線會更乾淨，並加上 mt-3 產生換行間距 */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
+                  <Clock className="w-3 h-3" />
+                  {game.start_time.slice(0, 5)} - {game.end_time.slice(0, 5)}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700">
+                  <Trophy className="w-3 h-3" />
+                  {game.level || "歡樂"}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700">
+                  <CircleDollarSign className="w-3 h-3" />
+                  {game.price > 0 ? `$${game.price}` : "免費"}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-100 text-zinc-700">
+                  <Users className="w-3 h-3" />
+                  {game.current_players} / {game.max_players || 12}
+                </span>
+              </div>
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-gray-800">
@@ -244,23 +268,11 @@ export default async function GameDetailPage({ params }: Props) {
           />
           {isHost && (
             <div className="mt-8 pt-6 border-t border-gray-100">
-              <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                👑 主揪控制台
-              </h3>
-              
-              <div className="space-y-4">
-                {/* 第一區：推廣 (視覺重心) */}
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500 font-medium ml-1">邀請球友</p>
-                  <ShareGameButton gameId={game.id} title={game.title} />
-                </div>
-
-                {/* 第二區：管理 (次要/危險) */}
-                <div className="space-y-2 pt-2">
-                  <p className="text-xs text-gray-500 font-medium ml-1">場次管理</p>
-                  <CancelGameButton gameId={game.id} courtId={game.court_id} />
-                </div>
-              </div>
+              <Link href={`/games/${game.id}/manage`}>
+              <button className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-4 rounded-lg transition-colors">
+                管理場次
+              </button>
+              </Link>
             </div>
           )}
         </div>

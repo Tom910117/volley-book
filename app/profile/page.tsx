@@ -20,7 +20,7 @@ export default async function ProfilePage() {
     .single()
 
   return (
-    <div className="max-w-xl mx-auto py-10">
+    <div className="max-w-xl mx-auto py-10">      
         <h1 className="text-2xl font-bold mb-6">設定個人檔案</h1>
 
         {/* 這裡就像積木一樣放進去，因為 Form 沒有外框，所以會完美融合 */}

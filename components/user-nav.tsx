@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { LogOut, User as UserIcon, CalendarDays } from "lucide-react"
+import { LogOut, User as UserIcon, CalendarDays, QrCode } from "lucide-react"
 
 // 定義它可以接收的資料 (從 Server 傳過來的)
 type Props = {
@@ -59,6 +59,10 @@ export function UserNav({ user, avatarUrl, email }: Props) {
         <DropdownMenuItem onClick={() => router.push('/dashboard')}>
           <CalendarDays className="mr-2 h-4 w-4" />
           個人預約
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push('/passport')}>
+          <QrCode className="mr-2 h-4 w-4" />
+          排球護照
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/profile')}>
           <UserIcon className="mr-2 h-4 w-4" />
