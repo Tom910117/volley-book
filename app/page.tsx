@@ -92,16 +92,18 @@ export default function Home() {
       if (data) {
         // 🔥 資料預處理與過濾
         const processedGames = data.map((game: any) => {
-          // 整理 current_players 讓 getGameStatus 判斷
+          // 1. 先把真正的數字拿出來
           const count = game.bookings?.[0]?.count || 0
-          return { ...game, current_players: count }
+          
+          // 2. 🔥 核心修正：用解構賦值把 bookings 抽離出來丟掉，把剩下的屬性裝進 rest
+          const { bookings, ...rest } = game
+          
+          // 3. 回傳乾淨的物件，強迫 getGameStatus 去讀 current_players
+          return { ...rest, current_players: count }
         }).filter((game: Game) => {
           // 呼叫大腦判定狀態
           const status = getGameStatus(game)
           
-          // 🛑 核心邏輯：過濾掉沒有意義的局
-          // 如果標籤包含這些關鍵字，代表這局不能報名了，直接從首頁剔除！
-          // (備註：保留「🈵 已額滿」，因為展示滿局可以營造平台很熱絡的氛圍)
           const isHidden = ["已結束", "已取消", "流局", "報名截止"].some(keyword => status.label.includes(keyword))
           
           return !isHidden
@@ -109,6 +111,7 @@ export default function Home() {
 
         setGames(processedGames)
       }
+      
     } finally {
       setIsLoading(false)
     }

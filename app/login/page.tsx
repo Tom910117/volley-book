@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-// 引入我們剛剛寫的瀏覽器專用連線工具
 import { createClient } from "@/lib/supabase-browser"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Rocket } from "lucide-react" // 確保你有安裝或替換此 icon
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -18,7 +18,27 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  // 處理登入
+  // 面試官/訪客一鍵登入邏輯
+  const handleDemoLogin = async () => {
+    setLoading(true)
+    setMessage(null)
+
+    // 請替換為你在 Supabase 建立的實際測試帳號密碼
+    const { error } = await supabase.auth.signInWithPassword({
+      email: "demo@volleybook.com", 
+      password: "demoPassword123",
+    })
+
+    if (error) {
+      setMessage("測試帳號登入失敗：" + error.message)
+    } else {
+      router.push("/")
+      router.refresh()
+    }
+    setLoading(false)
+  }
+
+  // 一般登入邏輯
   const handleLogin = async () => {
     setLoading(true)
     setMessage(null)
@@ -31,14 +51,13 @@ export default function LoginPage() {
     if (error) {
       setMessage("登入失敗：" + error.message)
     } else {
-      // 登入成功，跳轉回首頁
       router.push("/")
-      router.refresh() // 強制重新整理頁面，讓導覽列知道狀態更新了
+      router.refresh() 
     }
     setLoading(false)
   }
 
-  // 處理註冊
+  // 註冊邏輯
   const handleSignUp = async () => {
     setLoading(true)
     setMessage(null)
@@ -47,7 +66,6 @@ export default function LoginPage() {
       email,
       password,
       options: {
-        // 註冊後重新導向的網址 (通常是回到首頁驗證)
         emailRedirectTo: `${location.origin}/auth/callback`,
       },
     })
@@ -65,43 +83,64 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-xl shadow-lg border border-zinc-200">
         
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-zinc-900">歡迎回來</h2>
+          <h2 className="text-3xl font-extrabold text-zinc-900">VolleyBook</h2>
           <p className="mt-2 text-sm text-zinc-600">
-            請輸入帳號密碼以管理您的預約
+            請登入以管理您的排球預約與點名紀錄
           </p>
         </div>
 
-        <div className="space-y-4 mt-8">
+        <div className="space-y-6 mt-8">
           
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              type="email" 
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+          {/* 🚀 招募主管/面試官專用區塊 */}
+          <Button 
+            onClick={handleDemoLogin}
+            disabled={loading}
+            className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-bold py-6 text-base flex items-center justify-center gap-2 shadow-md transition-transform active:scale-95"
+          >
+            <Rocket className="w-5 h-5" />
+            面試官 / 訪客一鍵體驗
+          </Button>
+
+          {/* 分隔線 */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-zinc-300" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-white px-2 text-zinc-500">或使用一般帳號登入</span>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">密碼</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">密碼</Label>
-            <Input 
-              id="password" 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          {/* 錯誤或成功訊息顯示區 */}
           {message && (
             <div className={`p-3 rounded text-sm ${message.includes("成功") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
               {message}
             </div>
           )}
 
-          <div className="flex gap-4 pt-4">
+          <div className="flex gap-4 pt-2">
             <Button 
               className="flex-1 bg-zinc-900 hover:bg-zinc-800" 
               onClick={handleLogin}

@@ -68,18 +68,18 @@ export function CancelGameButton({ gameId, courtId }: Props) {
       style: {
         border: '1px solid #ef4444', // 紅色邊框警告
       },
-    })
+    }) 
   }
 
   return (
     <Button 
-      variant="destructive"
+      variant="outline"
       onClick={handleCancelClick} // 改成呼叫詢問函式
       disabled={loading}
-      className="w-full md:w-auto bg-gray-900 text-white hover:bg-gray-700 transition-colors font-medium px-6"
+      className="flex-1 bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50 hover:text-black gap-2 shadow-sm"
     >
-      <Trash2 className="w-4 h-4 mr-2" />
-      {loading ? "處理中..." : "取消此局"}
+      <Trash2 className="w-4 h-4 mr-2"/>
+      {loading ? "處理中..." :"取消此局"}
     </Button>
   )
 }

@@ -11,6 +11,7 @@ export async function Navbar() {
   const { data: { user } } = await supabase.auth.getUser()
 
   let finalAvatarUrl = user?.user_metadata?.avatar_url || null
+  let hasHosted = false
 
   // 2. 如果有登入，順便去 Profile 查有沒有自訂頭像
   if (user) {
@@ -28,6 +29,16 @@ export async function Navbar() {
       
       // 加上時間戳記避免快取 (這裡用 Server 時間，夠用了)
       finalAvatarUrl = `${data.publicUrl}?t=${new Date().getTime()}`
+    }
+
+    // 查詢是否當過主揪 (只取數量，不抓實際資料)
+    const { count } = await supabase
+      .from("games")
+      .select("id", { count: "exact", head: true })
+      .eq("host_id", user.id)
+ 
+    if (count && count > 0) {
+      hasHosted = true
     }
   }
 
@@ -48,7 +59,8 @@ export async function Navbar() {
             <UserNav 
               user={user} 
               email={user.email || null} 
-              avatarUrl={finalAvatarUrl} 
+              avatarUrl={finalAvatarUrl}
+              hasHosted={hasHosted}
             />
           ) : (
             // 未登入狀態的按鈕
