@@ -68,6 +68,7 @@ export function JoinGameButton({
         
         // 這裡傳入 p_force_waiting: needsWaitlist
         // 告訴後端：「雖然可能總人數沒滿，但請把我放進候補 (因為我是男生且滿了)」
+        // Call Supabase RPC to ensure atomic transaction and prevent race conditions
         const { data, error } = await supabase.rpc('join_game', {
           p_game_id: gameId,
           p_user_id: userId,
