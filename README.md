@@ -51,3 +51,10 @@ To protect the database connection pool from bot scraping and brute-force attack
    git clone <https://github.com/Tom910117/volley-book.git>
    cd my-volleyball-app
    npm install
+2. Configure Environment Variables:
+Create a .env.local file based on the provided .env.example and add your credentials:
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   # Add RESEND_API_KEY and INTERNAL_WEBHOOK_SECRET if testing email/webhook features
+3. Run the development server:
+   npm run dev
