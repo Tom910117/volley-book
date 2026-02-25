@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏐 VolleyBook: Enterprise-Grade Booking SaaS
 
-## Getting Started
+A high-performance, resilient venue booking and management system built with Next.js and Supabase. Designed to handle high-concurrency scenarios, enforce strict data consistency, and execute automated risk control mechanisms.
 
-First, run the development server:
+👉 **[Live Demo](<https://volley-book.vercel.app/>)**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 1-Click Recruiter / Guest Access
+To evaluate the core administrative features without manual registration, please use the 1-Click Login button on the authentication page, or use the following credentials:
+* **Email**: `demo@volleybook.com`
+* **Password**: `demoPassword123` *(Note: Replace with your actual demo password)*
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Once logged in, navigate to the **Manage Game** section to test the real-time QR Code attendance scanner and the database-driven credit scoring system.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🏗️ Core Architectural Decisions
 
-## Learn More
+This project is engineered to solve complex business logic and operational bottlenecks commonly found in high-traffic transactional systems (e.g., booking platforms, iGaming).
 
-To learn more about Next.js, take a look at the following resources:
+### 1. Zero-Overbooking Concurrency Defense (Database-Level Atomicity)
+Client-side validation is fundamentally flawed under heavy load. To prevent severe race conditions where multiple users compete for the last available slot:
+* Migrated the core reservation logic to a **PostgreSQL Stored Procedure (RPC)**.
+* Implemented strict **Row-Level Locks (`SELECT ... FOR UPDATE`)** inside a `BEGIN ... COMMIT` transaction block.
+* **Impact**: Physically guarantees data consistency at the database layer, eliminating any possibility of capacity overflow regardless of concurrent API requests.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. Event-Driven Risk Control & Credit System
+Malicious "no-shows" degrade platform revenue and user experience. To mitigate this, I built a tamper-proof state machine in the database:
+* Deployed **PostgreSQL Triggers** (`AFTER UPDATE`) on the `bookings` table.
+* Any change in attendance status (Present, Late, No-show) automatically triggers a strict recalculation of the user's `credit_score`.
+* **Read-Optimized Caching**: The computed score is materialized back into the `profiles` table to ensure $O(1)$ read performance for the frontend manager dashboard.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 3. Edge-Level Defense in Depth (Rate Limiting - *Planned*)
+To protect the database connection pool from bot scraping and brute-force attacks:
+* Architecture designed to intercept requests at the **Next.js Middleware (Edge Network)** layer.
+* Utilizing In-Memory Cache (Redis) and a Sliding Window algorithm to drop malicious payloads before they reach the main application server.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 💻 Tech Stack
+* **Framework**: Next.js 14 (App Router, Server Actions)
+* **Database & Auth**: Supabase (PostgreSQL, Row Level Security, Triggers, RPC)
+* **Styling & UI**: Tailwind CSS, shadcn/ui, Lucide Icons
+* **Deployment**: Vercel (Frontend & Edge Middleware)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🛠️ Local Development
+
+1. Clone the repository and install dependencies:
+   ```bash
+   git clone <https://github.com/Tom910117/volley-book.git>
+   cd my-volleyball-app
+   npm install
