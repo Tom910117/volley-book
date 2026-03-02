@@ -21,14 +21,12 @@ export async function createClient() {
           } catch (error) {
             // 在 Server Component (如 page.tsx) 中無法設定 Cookie 是正常的
             // 這個 try/catch 會忽略該錯誤，防止程式崩潰
-            console.error("\n🚨 抓到了！Server Component 試圖寫入 Cookie 失敗：", error)
           }
         },
         remove(name: string, options: any) {
           try {
             cookieStore.set({ name, value: '', ...options })
           } catch (error) {
-            console.error("\n🚨 抓到了！Server Component 試圖刪除 Cookie 失敗：", error)
           }
         },
       },
