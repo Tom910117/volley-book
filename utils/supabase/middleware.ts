@@ -1,9 +1,24 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
-export async function updateSession(request: NextRequest) {
-  // 1. 建立一個 "初始" 的 Response
-  // 我們稍後會把更新後的 Cookie 塞進這個 Response 裡
+// 1. 初始化 Upstash Redis 連線
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+// 2. 設定 Rate Limiter 規則 (Sliding Window)
+// 這裡設定：同一個 IP，在 10 秒內最多只能發送 10 次請求
+const ratelimit = new Ratelimit({
+  redis: redis,
+  limiter: Ratelimit.slidingWindow(10, "10 s"),
+  ephemeralCache: new Map(), // 可選：在 Edge 記憶體中做本地快取，進一步減少 Redis 請求
+});
+
+// 提取原有的 Session 更新邏輯
+async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -15,16 +30,10 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        // 讀取 Cookie (給 Supabase 驗證用)
         getAll() {
           return request.cookies.getAll();
         },
-        // 寫入 Cookie (如果 Token 過期換新，這裡會被觸發)
         setAll(cookiesToSet) {
-          console.log("♻️ [Middleware] 正在執行換票動作！寫入新 Cookie 中...", new Date().toISOString());
-          // 這裡是最關鍵的一步！
-          // 我們同時更新 "Request" (讓接下來的 page.tsx 拿到新票)
-          // 也更新 "Response" (讓瀏覽器收到新票)
           cookiesToSet.forEach(({ name, value, options }) =>
             request.cookies.set(name, value)
           );
@@ -39,24 +48,42 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // 2. 呼叫 getUser 來觸發 Token 驗證與自動更新
-  // 如果 Token 過期，上面的 setAll 就會被執行
   const { data: { user } } = await supabase.auth.getUser();
-
-  // 3. (選用) 簡單的路由保護
-  // 如果你想讓沒登入的人連首頁都不能看，可以在這裡擋
-  // 但通常我們會在 page.tsx 裡擋，這裡只負責換票
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    request.nextUrl.pathname !== "/" // 允許首頁公開
-  ) {
-    // 如果沒登入又想去受保護的頁面，踢回登入頁
-    // const url = request.nextUrl.clone()
-    // url.pathname = '/login'
-    // return NextResponse.redirect(url)
-  }
-
   return response;
 }
+
+// 這是 Next.js 預設匯出的 Middleware 主函式
+export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  // 3. L1 邊緣防禦：針對特定高風險路由進行 IP 限流
+  // 保護 /login 防止暴力破解密碼，保護 /api/ 防止惡意腳本刷單
+  if (path.startsWith("/api/") || path.startsWith("/login")) {
+    // 取得使用者 IP，若無則預設為 localhost
+    const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+    
+    // 向 Redis 確認該 IP 的請求額度
+    const { success, pending, limit, reset, remaining } = await ratelimit.limit(`ratelimit_${ip}`);
+
+    if (!success) {
+      // 在 Next.js 伺服器終端機印出日誌，方便後端觀測
+      console.log(`[Rate Limit Blocked] IP: ${ip} 請求遭攔截`);
+
+      // 額度用盡，直接在 Edge 層回傳 429 狀態碼，徹底阻斷進入後端與資料庫
+      return NextResponse.json(
+        { success: false, message: "請求過於頻繁，請稍後再試 (Too Many Requests)" },
+        { status: 429 }
+      );
+    }
+  }
+
+  // 4. 若通過限流檢查，則繼續執行 Supabase Token 換發與驗證
+  return await updateSession(request);
+}
+
+// 5. 設定 Matcher，避免 Middleware 攔截靜態資源 (如圖片、CSS) 消耗運算效能
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};
