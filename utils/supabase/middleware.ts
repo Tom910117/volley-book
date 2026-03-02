@@ -48,7 +48,7 @@ async function updateSession(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  await supabase.auth.getUser();
   return response;
 }
 
@@ -63,7 +63,7 @@ export async function middleware(request: NextRequest) {
     const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
     
     // 向 Redis 確認該 IP 的請求額度
-    const { success, pending, limit, reset, remaining } = await ratelimit.limit(`ratelimit_${ip}`);
+    const { success } = await ratelimit.limit(`ratelimit_${ip}`);
 
     if (!success) {
       // 在 Next.js 伺服器終端機印出日誌，方便後端觀測
