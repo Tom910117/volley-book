@@ -77,7 +77,7 @@ export function JoinGameButton({
 
         const data = await response.json();
 
-        if (!response.ok) throw new Error(data.error || "請求失敗");
+        if (!response.ok) throw new Error(data.message || data.error || "請求失敗");
 
         if (data.success) {
           if (data.booking_status === 'waiting') {
