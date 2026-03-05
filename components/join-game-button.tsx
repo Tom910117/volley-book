@@ -69,13 +69,15 @@ export function JoinGameButton({
         // 這裡傳入 p_force_waiting: needsWaitlist
         // 告訴後端：「雖然可能總人數沒滿，但請把我放進候補 (因為我是男生且滿了)」
         // Call Supabase RPC to ensure atomic transaction and prevent race conditions
-        const { data, error } = await supabase.rpc('join_game', {
-          p_game_id: gameId,
-          p_user_id: userId,
-          p_force_waiting: needsWaitlist // 👈 傳送前端的判斷
+        const response = await fetch("/api/games/join", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ gameId, needsWaitlist }),
         })
 
-        if (error) throw error
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || "請求失敗");
 
         if (data.success) {
           if (data.booking_status === 'waiting') {
