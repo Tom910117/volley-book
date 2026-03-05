@@ -13,8 +13,8 @@ const redis = new Redis({
 // 這裡設定：同一個 IP，在 10 秒內最多只能發送 10 次請求
 const ratelimit = new Ratelimit({
   redis: redis,
-  limiter: Ratelimit.slidingWindow(10, "10 s"),
-  ephemeralCache: new Map(), // 可選：在 Edge 記憶體中做本地快取，進一步減少 Redis 請求
+  limiter: Ratelimit.slidingWindow(5, "10 s"),
+  ephemeralCache: process.env.NODE_ENV === "production" ? new Map() : undefined,
 });
 
 // 提取原有的 Session 更新邏輯
