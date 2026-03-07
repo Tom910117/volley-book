@@ -17,6 +17,14 @@ const ratelimit = new Ratelimit({
   ephemeralCache: process.env.NODE_ENV === "production" ? new Map() : undefined,
 });
 
+// 3.這裡的設定代表：整個網站每 1 秒鐘，最多只允許 50 個報名請求進入後端
+// 多出來的請求會直接被 Edge 擋掉，顯示「系統忙碌中」
+const globalRouteRatelimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(50, "1 s"), 
+  ephemeralCache: process.env.NODE_ENV === "production" ? new Map() : undefined,
+});
+
 // 提取原有的 Session 更新邏輯
 async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -63,9 +71,9 @@ export async function proxy(request: NextRequest) {
     const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
     
     // 向 Redis 確認該 IP 的請求額度
-    const { success } = await ratelimit.limit(`ratelimit_${ip}`);
+    const ipResult = await ratelimit.limit(`ratelimit_${ip}`);
 
-    if (!success) {
+    if (!ipResult.success) {
       // 在 Next.js 伺服器終端機印出日誌，方便後端觀測
       console.log(`[Rate Limit Blocked] IP: ${ip} 請求遭攔截`);
 
@@ -74,6 +82,21 @@ export async function proxy(request: NextRequest) {
         { success: false, message: "請求過於頻繁，請稍後再試 (Too Many Requests)" },
         { status: 429 }
       );
+    }
+    // --- 2. 再擋全域總量 (防資料庫連線池被打爆) ---
+    // 注意這裡的 Key 是寫死的字串 "global_api_games_join"
+    // 代表不論 IP 是多少，所有人都在消耗這同一個 50次/秒 的額度
+    if (path === "/api/games/join") {
+      const globalResult = await globalRouteRatelimit.limit(`global_api_games_join`);
+      
+      if (!globalResult.success) {
+        console.log(`[Global Rate Limit] Traffic spike prevented at Edge!`);
+        // 回傳友善的錯誤訊息給前端的 Toast 顯示
+        return NextResponse.json(
+          { success: false, message: "目前報名人數眾多，系統忙碌中，請稍後重試！" }, 
+          { status: 429 }
+        );
+      }
     }
   }
 
