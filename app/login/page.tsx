@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { LoginSchema, type LoginInput } from "@/lib/schemas/auth"
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Rocket, Loader2 } from "lucide-react"
 
-export default function LoginPage() {
+function LoginContent() {
   const { login, loading } = useAuth()
   const supabase = createClient() 
 
@@ -154,5 +154,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+export default function LoginPage() {
+  return (
+    // fallback 是在等待網址參數解析時，畫面會暫時顯示的東西
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-zinc-50">載入中...</div>}>
+      <LoginContent />
+    </Suspense>
   )
 }
