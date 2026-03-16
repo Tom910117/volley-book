@@ -59,3 +59,4 @@ Create a .env.local file based on the provided .env.example and add your credent
 3. Run the development server:
    ```bash
    npm run dev
+```

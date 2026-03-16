@@ -10,7 +10,7 @@ const redis = new Redis({
 });
 
 // 2. 設定 Rate Limiter 規則 (Sliding Window)
-// 這裡設定：同一個 IP，在 10 秒內最多只能發送 10 次請求
+// 這裡設定：同一個 IP，在 10 秒內最多只能發送 5 次請求
 const ratelimit = new Ratelimit({
   redis: redis,
   limiter: Ratelimit.slidingWindow(5, "10 s"),
@@ -83,7 +83,7 @@ export async function proxy(request: NextRequest) {
         { status: 429 }
       );
     }
-    // --- 2. 再擋全域總量 (防資料庫連線池被打爆) ---
+    // --- 2. 再擋報名路由總量 (防資料庫連線池被打爆) ---
     // 注意這裡的 Key 是寫死的字串 "global_api_games_join"
     // 代表不論 IP 是多少，所有人都在消耗這同一個 50次/秒 的額度
     if (path === "/api/games/join") {
@@ -94,6 +94,23 @@ export async function proxy(request: NextRequest) {
         // 回傳友善的錯誤訊息給前端的 Toast 顯示
         return NextResponse.json(
           { success: false, message: "目前報名人數眾多，系統忙碌中，請稍後重試！" }, 
+          { status: 429 }
+        );
+      }   
+    }
+    //取消報名路由的限流，這裡就統一用globalRouteRatelimit的次數好了
+    //注意這裡是使用不同的Bucket,所以報名和取消並不會影響彼此
+    const isCancelRoute =
+      (path.startsWith("/api/bookings/") && request.method === "DELETE") ||
+      path === "/api/games/cancel";
+
+    if (isCancelRoute) {
+      const cancelResult = await globalRouteRatelimit.limit(`global_api_cancel`);
+
+      if (!cancelResult.success) {
+        console.log(`[Global Rate Limit] Cancel traffic spike prevented!`);
+        return NextResponse.json(
+          { success: false, message: "目前系統處理大量請求中，請稍後再試！" },
           { status: 429 }
         );
       }

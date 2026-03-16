@@ -2,10 +2,10 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase-browser"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useCancelBooking } from "@/hooks/useCancelBooking"
 
 type Props = {
   gameId: string
@@ -29,7 +29,7 @@ export function JoinGameButton({
   
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const { cancelByGameId } = useCancelBooking()
 
   // 🔥 邏輯：只有在「還沒加入」的時候才需要判斷是否強制候補
   const needsWaitlist = !isJoined && (isFull || (amIMale && isMaleFull))
@@ -37,9 +37,11 @@ export function JoinGameButton({
   const handleClick = async () => {
     // 1. 防呆：沒登入
     if (!userId) {
-      toast.error("請先登入", { description: "登入後才能搶位子喔！" })
-      router.push("/login")
-      return
+      toast.error("請先登入");
+      // 利用 encodeURIComponent 確保網址格式正確
+      const targetUrl = encodeURIComponent(`/games/${gameId}`);
+      router.push(`/login?next=${targetUrl}`);
+      return;
     }
 
     setLoading(true)
@@ -47,15 +49,9 @@ export function JoinGameButton({
     try {
       if (isJoined) {
         // ==========================================
-        // 🚪 退出邏輯 (Delete) - 維持在前端做
+        // 🚪 退出邏輯 (Delete) - 換上我們的 Hook
         // ==========================================
-        const { error } = await supabase
-          .from("bookings")
-          .delete()
-          .eq("game_id", gameId)
-          .eq("user_id", userId)
-
-        if (error) throw error
+        await cancelByGameId(gameId) // 🌟 一行搞定！原本的 Supabase 邏輯全刪！
 
         toast.info(myStatus === 'waiting' ? "已取消候補" : "已取消報名", {
           description: "期待下次球場見！👋"

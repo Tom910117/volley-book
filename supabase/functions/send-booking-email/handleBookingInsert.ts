@@ -54,7 +54,7 @@ export async function handleBookingInsert(record: any) {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'VolleyBook <onboarding@resend.dev>',
+        from: 'VolleyBook <noreply@volleybook.online>',
         to: user.email,
         subject: `[報名確認] ${game.title}`,
         html: emailHtml,

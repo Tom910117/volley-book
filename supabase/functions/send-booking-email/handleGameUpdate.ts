@@ -74,7 +74,7 @@ export async function handleGameUpdate(newGame: any, oldGame: any) {
     // 6. 組合 Resend Batch (群發) 陣列格式
     // Resend Batch API 允許我們一次發送多封不同或相同的信件陣列
     const batchEmails = emails.map(email => ({
-      from: 'VolleyBook <onboarding@resend.dev>',
+      from: 'VolleyBook <noreply@volleybook.online>',
       to: email,
       subject: subject,
       html: emailHtml,
