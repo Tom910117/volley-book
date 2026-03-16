@@ -3,8 +3,7 @@ import { JoinGameButton } from "@/components/join-game-button"
 import Link from "next/link"
 import { formatTime } from "@/lib/time-utils"
 import { Calendar as CalendarIcon, MapPin, Clock, Users, ArrowRight, Building2, Trophy, CircleDollarSign } from "lucide-react"
-import { CancelGameButton } from "@/components/cancel-game-button"
-import {ShareGameButton} from "@/components/share-game-button"
+
 type Props = {
   params: Promise<{ id: string }>
 }
