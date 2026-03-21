@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-// 🔥 補上 Trophy, CircleDollarSign 等圖示
-import { Calendar as CalendarIcon, MapPin, Clock, Users, ArrowRight, Building2, Trophy, CircleDollarSign } from "lucide-react"
+import { Calendar as CalendarIcon, MapPin, Clock, Users, ArrowRight, Building2, Trophy, CircleDollarSign, UserRound } from "lucide-react"
 import { createClient } from "@/lib/supabase-browser"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -12,7 +11,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
-// 🔥 引入你寫好的超強大腦
 import { getGameStatus } from "@/lib/game-status-utils"
 
 // 型別定義補充完整
@@ -34,7 +32,8 @@ type Game = {
   // 用來接收 Supabase 計算的報名人數
   bookings?: { count: number }[] 
   // 給 getGameStatus 用的輔助屬性
-  current_players?: number 
+  current_players?: number
+  net_type: string 
 }
 
 type Court = {
@@ -176,9 +175,7 @@ export default function Home() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">所有球館</SelectItem>
-              <SelectItem value="taipei-gym">台北體育館</SelectItem>
-              <SelectItem value="fju-gym">輔大中美堂</SelectItem>
-              <SelectItem value="ntu-gym">台大體育館</SelectItem>
+              <SelectItem value="taipei">測試用球館</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -245,6 +242,14 @@ export default function Home() {
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
                             <Clock className="w-3 h-3" />
                             {game.start_time.slice(0, 5)} - {game.end_time.slice(0, 5)}
+                          </span>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium ${
+                            game.net_type === '男網' 
+                              ? 'bg-indigo-50 text-indigo-700'  // 男網用靛藍色
+                              : 'bg-rose-50 text-rose-700'      // 女網用玫瑰色
+                          }`}>
+                            <UserRound className="w-3 h-3" />
+                            {game.net_type}
                           </span>
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700">
                             <Trophy className="w-3 h-3" />

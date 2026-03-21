@@ -42,6 +42,7 @@ export function CreateGameForm({ isOpen, onClose, courtId, date, userId, existin
   const [isPublic, setIsPublic] = useState(false) // 預設私人
   const [level, setLevel] = useState("歡樂") // 預設程度
   const [price, setPrice] = useState(200) // 預設價格
+  const [netType, setNetType] = useState("女網")//預設女網
   const [players, setPlayers] = useState(12)
   const [minplayers, setMinplayers] = useState(12)
   const [isAgreed, setIsAgreed] = useState(false)
@@ -144,7 +145,8 @@ export function CreateGameForm({ isOpen, onClose, courtId, date, userId, existin
           start_time: startTime,
           end_time: endTime,
           male_limit: finalMaleLimit,
-          signup_deadline: finalDeadline
+          signup_deadline: finalDeadline,
+          net_type: netType
         })
         .select()
         .single() // 拿回剛剛建立的那一筆，因為我們需要它的 ID
@@ -215,6 +217,21 @@ export function CreateGameForm({ isOpen, onClose, courtId, date, userId, existin
                 onChange={(e) => setLevel(e.target.value)}
                 className="col-span-3"
               />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="netType" className="text-right">網高</Label>
+              <div className="col-span-3">
+                <Select value={netType} onValueChange={setNetType}>
+                  <SelectTrigger id="netType" className="w-full">
+                    <SelectValue placeholder="選擇網高" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="男網">男網 (2.43m)</SelectItem>
+                    <SelectItem value="女網">女網 (2.24m)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
              <div className="grid grid-cols-4 items-center gap-4">
