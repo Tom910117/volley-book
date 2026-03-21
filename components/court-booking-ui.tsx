@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { formatTime } from "@/lib/time-utils" 
 import { toast } from "sonner"
-import { Clock, Users, Trophy, Lock, Plus, CircleDollarSign } from "lucide-react"
+import { Clock, Users, Trophy, Lock, Plus, CircleDollarSign, UserRound } from "lucide-react"
 import { getGameStatus } from "@/lib/game-status-utils"; 
 
 type Props = {
@@ -117,6 +117,14 @@ export default function CourtBookingUI({ courtId, date, existingGames, userId }:
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-100">
                       <Clock className="w-3.5 h-3.5" />
                       {formatTime(game.start_time)} - {formatTime(game.end_time)}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium ${
+                      game.net_type === '男網' 
+                        ? 'bg-indigo-50 text-indigo-700'  // 男網用靛藍色
+                        : 'bg-rose-50 text-rose-700'      // 女網用玫瑰色
+                    }`}>
+                      <UserRound className="w-3 h-3" />
+                      {game.net_type}
                     </span>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium bg-yellow-50 text-yellow-700 border border-yellow-100">
                       <Trophy className="w-3.5 h-3.5" />
