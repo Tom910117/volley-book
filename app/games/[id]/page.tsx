@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { JoinGameButton } from "@/components/join-game-button"
 import Link from "next/link"
 import { formatTime } from "@/lib/time-utils"
-import { Calendar as CalendarIcon, MapPin, Clock, Users, ArrowRight, Building2, Trophy, CircleDollarSign } from "lucide-react"
+import { Calendar as CalendarIcon, MapPin, Clock, Users, ArrowRight, Building2, Trophy, CircleDollarSign, UserRound } from "lucide-react"
 
 type Props = {
   params: Promise<{ id: string }>
@@ -111,6 +111,14 @@ export default async function GameDetailPage({ params }: Props) {
                   <Clock className="w-3 h-3" />
                   {game.start_time.slice(0, 5)} - {game.end_time.slice(0, 5)}
                 </span>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium ${
+                      game.net_type === '男網' 
+                        ? 'bg-indigo-50 text-indigo-700'  // 男網用靛藍色
+                        : 'bg-rose-50 text-rose-700'      // 女網用玫瑰色
+                    }`}>
+                      <UserRound className="w-3 h-3" />
+                      {game.net_type}
+                    </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700">
                   <Trophy className="w-3 h-3" />
                   {game.level || "歡樂"}
