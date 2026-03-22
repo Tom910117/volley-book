@@ -1,4 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
@@ -17,15 +17,21 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        // 【修正區塊】將 get/set/remove 替換為最新的 getAll/setAll
         cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
+          getAll() {
+            return cookieStore.getAll()
           },
-          set(name: string, value: string, options: CookieOptions) {
-            cookieStore.set({ name, value, ...options })
-          },
-          remove(name: string, options: CookieOptions) {
-            cookieStore.set({ name, value: '', ...options })
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) => {
+                cookieStore.set(name, value, options)
+              })
+            } catch (error) {
+              // 捕捉錯誤：如果在不允許寫入 Header 的環境 (如 Server Component 渲染期間)
+              // 觸發了 setAll，這個 catch 可以防止應用程式崩潰。
+              // 在 Route Handler 這裡通常能正常寫入，但加上 try-catch 是官方建議的最佳實踐。
+            }
           },
         },
       }
