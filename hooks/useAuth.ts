@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { LoginInput, RegisterInput } from "@/lib/schemas/auth";
+import { createClient } from "@/lib/supabase-browser";
 
 export function useAuth() {
   const [loading, setLoading] = useState(false);
@@ -73,9 +74,37 @@ export function useAuth() {
     }
   };
 
+  const loginWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const nextUrl = searchParams.get("next") || "/"; // 記錄使用者原本想去哪
+
+      // 直接請 Supabase 幫我們把畫面跳轉到 Google
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          // 登入成功後，Google 會把使用者導向我們後端的 callback 路由，並帶上 next 參數
+          redirectTo: `${window.location.origin}/auth/callback?next=${nextUrl}`,
+          queryParams: {
+            access_type: 'offline', 
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) throw error;
+      
+    } catch (error: any) {
+      toast.error("Google 登入發起失敗", { description: error.message });
+      setLoading(false); // 只有失敗才解除 loading，成功的話畫面已經跳走了
+    }
+  };
+
   return {
     login,
     register,
+    loginWithGoogle,
     loading,
   };
 }
